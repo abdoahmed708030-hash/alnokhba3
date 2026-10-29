@@ -1271,14 +1271,32 @@ body.admin-mode #adminApp { display: block; }
 .modal {
   background: var(--card-bg);
   border-radius: 20px;
-  padding: 30px 26px;
+  padding: 26px 24px;
   max-width: 440px;
   width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
   transform: translateY(20px) scale(0.98);
   transition: transform 0.25s ease;
   direction: rtl;
+  scrollbar-width: thin;
+  scrollbar-color: var(--orange) var(--gray);
+}
+
+.modal::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal::-webkit-scrollbar-track {
+  background: var(--gray);
+  border-radius: 10px;
+}
+
+.modal::-webkit-scrollbar-thumb {
+  background: var(--orange);
+  border-radius: 10px;
 }
 
 .modal-bg.open .modal {
