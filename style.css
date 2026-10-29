@@ -1522,3 +1522,37 @@ body.admin-mode #adminApp { display: block; }
   }
   .no-print, .invoice__actions { display: none !important; }
 }
+/* تنسيق حقل كلمة المرور مع أيقونة الإظهار */
+.password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-wrap input {
+  width: 100%;
+  padding-inline-end: 42px !important;
+}
+
+.toggle-password-btn {
+  position: absolute;
+  inset-inline-end: 10px;
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: color 0.2s;
+}
+
+.toggle-password-btn:hover {
+  color: var(--ink);
+}
+
+.toggle-password-btn svg {
+  width: 18px;
+  height: 18px;
+}
