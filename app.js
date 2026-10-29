@@ -145,27 +145,54 @@ function toggleAuthMode() {
 
 async function handleAuth(e) {
   e.preventDefault();
-  const email = document.getElementById('authEmail').value.trim();
-  const password = document.getElementById('authPassword').value;
+  
+  const emailInput = document.getElementById('authEmail');
+  const passwordInput = document.getElementById('authPassword');
   const submitBtn = document.getElementById('authSubmitBtn');
 
+  if (!emailInput || !passwordInput) {
+    alert('حدث خطأ في قراءة بيانات النموذج');
+    return;
+  }
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+
   if (isSignUp) {
-    const fullName = document.getElementById('authName').value.trim();
-    const phone = document.getElementById('authPhone').value.trim();
-    const confirmPass = document.getElementById('authConfirmPassword').value;
+    const nameInput = document.getElementById('authName');
+    const phoneInput = document.getElementById('authPhone');
+    const confirmPassInput = document.getElementById('authConfirmPassword');
 
-    if (!fullName) { toast('يرجى إدخال الاسم بالكامل'); return; }
-    if (!phone || !/^01[0-9]{9}$/.test(phone)) { toast('يرجى إدخال رقم هاتف صحيح مكون من 11 رقم'); return; }
-    if (password.length < 6) { toast('كلمة المرور يجب أن لا تقل عن 6 أحرف'); return; }
-    if (password !== confirmPass) { toast('كلمة المرور وتأكيد كلمة المرور غير متطابقين'); return; }
+    const fullName = nameInput ? nameInput.value.trim() : '';
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+    const confirmPass = confirmPassInput ? confirmPassInput.value : '';
 
-    submitBtn.textContent = 'جاري إنشاء الحساب...';
-    submitBtn.disabled = true;
+    if (!fullName) { 
+      toast('يرجى إدخال الاسم بالكامل'); 
+      return; 
+    }
+    if (!phone || !/^01[0-9]{9}$/.test(phone)) { 
+      toast('يرجى إدخال رقم هاتف صحيح مكون من 11 رقم يبدأ بـ 01'); 
+      return; 
+    }
+    if (password.length < 6) { 
+      toast('كلمة المرور يجب أن لا تقل عن 6 أحرف أو أرقام'); 
+      return; 
+    }
+    if (password !== confirmPass) { 
+      toast('كلمة المرور وتأكيد كلمة المرور غير متطابقين'); 
+      return; 
+    }
+
+    if (submitBtn) {
+      submitBtn.textContent = 'جاري إنشاء الحساب...';
+      submitBtn.disabled = true;
+    }
 
     try {
       const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
+        email: email,
+        password: password,
         options: {
           data: {
             full_name: fullName,
@@ -176,13 +203,13 @@ async function handleAuth(e) {
 
       if (error) throw error;
 
-      // تسجيل الدخول المباشر بعد إنشاء الحساب
-      const { data: signInData, error: signInErr } = await supabaseClient.auth.signInWithPassword({
-        email,
-        password
+      // محاولة تسجيل الدخول مباشرة بعد نجاح التسجيل
+      const { data: loginData, error: loginErr } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
       });
 
-      if (!signInErr && signInData?.user) {
+      if (!loginErr && loginData?.user) {
         toast('تم إنشاء الحساب وتسجيل الدخول بنجاح');
         closeAuthModal();
         await checkAuth();
@@ -190,21 +217,30 @@ async function handleAuth(e) {
           go(currentPage);
         }
       } else {
-        toast('تم إنشاء الحساب بنجاح، يرجى تسجيل الدخول');
+        toast('تم إنشاء الحساب بنجاح، يمكنك تسجيل الدخول الآن');
         toggleAuthMode();
       }
     } catch (err) {
-      toast('خطأ في التسجيل: ' + (err.message || 'فشل الاتصال'));
+      console.error('Sign up error:', err);
+      toast('خطأ في التسجيل: ' + (err.message || 'تأكد من الاتصال بالإنترنت'));
     } finally {
-      submitBtn.textContent = 'إنشاء الحساب';
-      submitBtn.disabled = false;
+      if (submitBtn) {
+        submitBtn.textContent = 'إنشاء الحساب';
+        submitBtn.disabled = false;
+      }
     }
   } else {
-    submitBtn.textContent = 'جاري التحقق...';
-    submitBtn.disabled = true;
+    if (submitBtn) {
+      submitBtn.textContent = 'جاري التحقق...';
+      submitBtn.disabled = true;
+    }
 
     try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
       if (error) throw error;
 
       toast('تم تسجيل الدخول بنجاح');
@@ -215,10 +251,13 @@ async function handleAuth(e) {
       else if (currentPage === 'cart') render_cart();
       else if (currentPage === 'checkout') render_checkout();
     } catch (err) {
-      toast('خطأ في تسجيل الدخول: ' + (err.message || 'تأكد من صحة البريد وكلمة المرور'));
+      console.error('Sign in error:', err);
+      toast('خطأ: ' + (err.message || 'بيانات الدخول غير صحيحة'));
     } finally {
-      submitBtn.textContent = 'دخول';
-      submitBtn.disabled = false;
+      if (submitBtn) {
+        submitBtn.textContent = 'دخول';
+        submitBtn.disabled = false;
+      }
     }
   }
 }
