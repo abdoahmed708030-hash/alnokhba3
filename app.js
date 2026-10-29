@@ -528,10 +528,22 @@ function closeProductDetailModal() {
 // ============================================================
 // 6. سلة التسوق وإتمام الطلب (Cart & Checkout)
 // ============================================================
+function render_cart() {
+  const app = document.getElementById('app');
+  if (!CART.length) {
+    app.innerHTML = `
+      <div class="empty">
+        ${icon('empty', 'style="width:80px;height:80px"')}
+        <h2>السلة فارغة حاليا</h2>
+        <p>ابدأ التسوق واختر مستلزماتك لتظهر هنا</p>
+        <button class="btn btn-primary" onclick="go('products')">تصفح المنتجات</button>
+      </div>`;
+    return;
+  }
 
   const total = CART.reduce((s, x) => s + x.price * x.qty, 0);
   app.innerHTML = `
-    <h2 class="section-title">سلة التسوق 🛒</h2>
+    <h2 class="section-title">سلة التسوق</h2>
     <div style="margin-top:20px">
       ${CART.map((it, i) => `
         <div class="cart-item">
@@ -559,7 +571,7 @@ function closeProductDetailModal() {
       <button class="btn" style="background:var(--gray);color:var(--ink)" onclick="go('products')">متابعة التسوق</button>
     </div>
   `;
-
+}
 
 function changeCartQty(index, delta) {
   if (CART[index]) {
@@ -599,7 +611,7 @@ async function render_checkout() {
   const phone = currentProfile?.phone || '';
 
   document.getElementById('app').innerHTML = `
-    <h2 class="section-title">إتمام وتأكيد الطلب 📝</h2>
+    <h2 class="section-title">إتمام وتأكيد الطلب</h2>
     <p class="section-sub">يرجى كتابة البيانات بدقة للتجهيز والاستلام</p>
 
     <form class="form" onsubmit="submitOnlineOrder(event)">
@@ -693,9 +705,10 @@ async function submitOnlineOrder(e) {
   }
 
   setCart([]);
-  toast('تم إرسال طلبك بنجاح! ');
+  toast('تم إرسال طلبك بنجاح');
   go('invoice', orderNumber);
 }
+
 // ============================================================
 // 7. الفواتير وتتبع الطلبات (Invoices & Order Tracking)
 // ============================================================
@@ -705,30 +718,30 @@ async function render_invoice(num) {
   if (!o) { go('orders'); return; }
 
   const lines = [
-    `* فاتورة طلب — ${STORE_NAME}*`,
+    `*فاتورة طلب — ${STORE_NAME}*`,
     '',
     `*رقم الطلب:* ${o.order_number}`,
     `*تاريخ الطلب:* ${new Date(o.created_at).toLocaleString('ar-EG')}`,
     '',
-    `*👤 بيانات العميل:*`,
+    `*بيانات العميل:*`,
     `الاسم: ${o.customer}`,
     `الهاتف: ${o.phone}`,
     `الاحتياطي: ${o.backup_phone}`,
     '',
-    `* الأصناف المطلوبة:*`
+    `*الأصناف المطلوبة:*`
   ];
   o.items.forEach((it, i) => {
     lines.push(`${i + 1}. ${it.name} | ${it.qty} × ${fmt(it.price)} = ${fmt(it.price * it.qty)}`);
   });
   lines.push('');
-  lines.push(`* الإجمالي النهائي: ${fmt(o.total)}*`);
+  lines.push(`*الإجمالي النهائي: ${fmt(o.total)}*`);
   lines.push('');
-  lines.push(`*🚚 تفاصيل الاستلام:*`);
+  lines.push(`*تفاصيل الاستلام:*`);
   lines.push(`المكان: ${o.location}`);
   lines.push(`الموعد: ${o.slot}`);
   if (o.notes && o.notes !== '—') lines.push(`ملاحظات: ${o.notes}`);
   lines.push('');
-  lines.push(`*⏳ الحالة الحالية:* ${STATUSES[o.status]?.label || o.status}`);
+  lines.push(`*الحالة الحالية:* ${STATUSES[o.status]?.label || o.status}`);
 
   const waText = encodeURIComponent(lines.join('\n'));
 
@@ -738,7 +751,7 @@ async function render_invoice(num) {
         <div class="invoice__brand">
           <img src="logo.png" alt="" onerror="this.style.display='none'">
           <div>
-            <h2>${STORE_NAME} </h2>
+            <h2>${STORE_NAME}</h2>
             <p>مستلزماتك المدرسية والجامعية</p>
           </div>
         </div>
@@ -749,7 +762,7 @@ async function render_invoice(num) {
       </div>
       <div class="invoice__body">
         <div class="invoice__note">
-           تم تسجيل طلبك بنجاح! اضغط بالأسفل لإرسال الفاتورة لرقم المكتبة عبر واتساب لتأكيد الحجز.
+          تم تسجيل طلبك بنجاح، اضغط بالأسفل لإرسال الفاتورة لرقم المكتبة عبر واتساب لتأكيد الحجز.
         </div>
         <div class="invoice__meta">
           <div><small>العميل</small><b>${o.customer}</b></div>
@@ -778,53 +791,8 @@ async function render_invoice(num) {
           ${icon('wa')} تأكيد وإرسال الفاتورة عبر واتساب
         </a>
         <button class="btn btn-navy" onclick="window.print()">${icon('print')} طباعة</button>
-        <button class="btn" style="background:var(--gray);color:var(--ink)" onclick="go('orders')">متابعة طلباتي 📦</button>
+        <button class="btn" style="background:var(--gray);color:var(--ink)" onclick="go('orders')">متابعة طلباتي</button>
       </div>
-    </div>
-  `;
-}
-
-function render_cart() {
-  const app = document.getElementById('app');
-  if (!CART.length) {
-    app.innerHTML = `
-      <div class="empty">
-        ${icon('empty', 'style="width:80px;height:80px"')}
-        <h2>السلة فارغة حاليا</h2>
-        <p>ابدأ التسوق واختر مستلزماتك لتظهر هنا</p>
-        <button class="btn btn-primary" onclick="go('products')">تصفح المنتجات</button>
-      </div>`;
-    return;
-  }
-
-  const total = CART.reduce((s, x) => s + x.price * x.qty, 0);
-  app.innerHTML = `
-    <h2 class="section-title">سلة التسوق</h2>
-    <div style="margin-top:20px">
-      ${CART.map((it, i) => `
-        <div class="cart-item">
-          <img src="${it.img || 'https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=300&q=75'}" alt="${it.name}">
-          <div class="cart-item__info">
-            <p class="cart-item__name">${it.name}</p>
-            <div class="cart-item__price">${fmt(it.price)} × ${it.qty} = ${fmt(it.price * it.qty)}</div>
-            <div class="cart-item__qty">
-              <button onclick="changeCartQty(${i}, -1)">-</button>
-              <span style="font-weight:800;font-size:13px">${it.qty}</span>
-              <button onclick="changeCartQty(${i}, 1)">+</button>
-            </div>
-          </div>
-          <button class="cart-item__del" onclick="removeCartItem(${i})" aria-label="حذف">${icon('trash')}</button>
-        </div>`).join('')}
-    </div>
-
-    <div class="total-bar">
-      <span>الإجمالي المستحق</span>
-      <strong>${fmt(total)}</strong>
-    </div>
-
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="proceedToCheckout()">${icon('arrow')} إتمام وتأكيد الطلب</button>
-      <button class="btn" style="background:var(--gray);color:var(--ink)" onclick="go('products')">متابعة التسوق</button>
     </div>
   `;
 }
@@ -877,41 +845,6 @@ async function render_orders() {
     </div>
   `;
 }
-
-  const orders = await fetchOrders();
-  const app = document.getElementById('app');
-
-  if (!orders.length) {
-    app.innerHTML = `
-      <div class="empty">
-        ${icon('empty')}
-        <h2>لا توجد لديك طلبات مسجلة بعد </h2>
-        <p>ابدأ تسوق مستلزماتك الدراسية الآن</p>
-        <button class="btn btn-primary" onclick="go('products')">تصفح المنتجات</button>
-      </div>`;
-    return;
-  }
-
-  app.innerHTML = `
-    <h2 class="section-title">طلباتي السابقة </h2>
-    <p class="section-sub">${orders.length} طلبات مسجلة بحسابك</p>
-
-    <div style="display:grid;gap:12px;margin-top:20px">
-      ${orders.map(o => `
-        <div class="order-card" onclick="go('orderDetail', '${o.order_number}')">
-          <div class="order-card__head">
-            <span class="order-card__num">${o.order_number}</span>
-            <span class="order-card__status ${STATUSES[o.status]?.cls || ''}">${STATUSES[o.status]?.label || o.status}</span>
-          </div>
-          <div class="order-card__meta">
-            <span> ${new Date(o.created_at).toLocaleDateString('ar-EG')}</span>
-            <span> ${fmt(o.total)}</span>
-            <span> ${o.items.length} أصناف</span>
-            <span> ${o.location}</span>
-          </div>
-        </div>`).join('')}
-    </div>
-  `;
 
 
 async function render_orderDetail(num) {
