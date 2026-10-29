@@ -1522,21 +1522,26 @@ body.admin-mode #adminApp { display: block; }
   }
   .no-print, .invoice__actions { display: none !important; }
 }
-/* تنسيق حقل كلمة المرور مع أيقونة الإظهار */
+/* تنسيق حقل كلمة المرور وضبط موضع العين بدقة */
 .password-wrap {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .password-wrap input {
   width: 100%;
-  padding-inline-end: 42px !important;
+  padding-left: 14px !important;
+  padding-right: 44px !important;
+  box-sizing: border-box;
 }
 
 .toggle-password-btn {
   position: absolute;
-  inset-inline-end: 10px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   background: transparent;
   border: 0;
   padding: 4px;
@@ -1545,6 +1550,7 @@ body.admin-mode #adminApp { display: block; }
   align-items: center;
   justify-content: center;
   color: var(--muted);
+  z-index: 2;
   transition: color 0.2s;
 }
 
@@ -1553,6 +1559,7 @@ body.admin-mode #adminApp { display: block; }
 }
 
 .toggle-password-btn svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
+  display: block;
 }
