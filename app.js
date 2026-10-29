@@ -617,11 +617,11 @@ async function render_checkout() {
     <form class="form" onsubmit="submitOnlineOrder(event)">
       <div>
         <label>الاسم الرباعي الكامل *</label>
-        <input name="fullName" value="${fullName}" placeholder="مثال: أحمد محمد علي حسن" required pattern=".*\\s+.*\\s+.*\\s+.*" title="يرجى إدخال اسم رباعي كامل">
+        <input name="fullName" value="${fullName}" placeholder="مثال:ادخل اسمك" required pattern=".*\\s+.*\\s+.*\\s+.*" title="يرجى إدخال اسم رباعي كامل">
       </div>
       <div>
         <label>رقم الهاتف الأساسي (01xxxxxxxxx) *</label>
-        <input name="phone" type="tel" value="${phone}" placeholder="01012345678" required pattern="01[0-9]{9}">
+        <input name="phone" type="tel" value="${phone}" placeholder="ادخل رقمك" required pattern="01[0-9]{9}">
       </div>
       <div>
         <label>رقم هاتف احتياطي *</label>
