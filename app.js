@@ -2,7 +2,7 @@
 // 1. إعدادات الاتصال بـ Supabase وبيانات المتجر الرسمية
 // ============================================================
 // تم تصحيح عنوان المشروع بدقة (حرف l الصحيح بدلاً من الخطأ المطبعي) لمنع Failed to fetch
-const SUPABASE_URL = 'https://ckbajixdhbigrslbfbdf.supabase.co';
+const SUPABASE_URL = 'https://ckbajixdhlbgrslbfbdf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Bymlf2vYI1qyqWsZ5uz_cg_olVr4vHt';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
