@@ -53,7 +53,8 @@
       <button class="menu-toggle mobile-only" onclick="toggleMenu()" aria-label="فتح القائمة">☰</button>
     </div>
   </header>
-  <!-- القائمة الجانبية المخصصة للموبايل والتابلت -->
+
+  <!-- القائمة الجانبية للموبايل -->
   <div class="side-menu-overlay" id="sideMenuOverlay" onclick="toggleMenu()"></div>
   <aside class="side-menu" id="sideMenu">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,0.15)">
@@ -95,15 +96,15 @@
     </a>
   </aside>
 
-  <!-- الحاوية الديناميكية لجميع صفحات المتجر -->
+  <!-- الحاوية الرئيسية للمتجر -->
   <main class="container" id="app"></main>
 
-  <!-- الفوتر الرسمي للمتجر (بدون أيقونة الواتساب العائمة بالأسفل) -->
+  <!-- الفوتر الرسمي -->
   <footer class="footer">
     <div class="container">
       <div class="footer__grid">
         <div>
-          <h4>مكتبة النخبة 3 </h4>
+          <h4>مكتبة النخبة 3</h4>
           <p>منصتك المتكاملة لتجهيز وشراء جميع مستلزماتك الدراسية، الأدوات الهندسية، والكتب المرجعية بأعلى جودة وأفضل سعر في مصر.</p>
         </div>
         <div>
@@ -132,8 +133,8 @@
         </div>
         <div>
           <h4>إدارة المكتبة</h4>
-          <p>• الباشممرض عبدالرحمن أحمد</p>
-          <p>• مستر عبدالله حجاج</p>
+          <p>الباشممرض عبدالرحمن أحمد</p>
+          <p>مستر عبدالله حجاج</p>
         </div>
       </div>
       <div class="footer__bottom">
@@ -142,6 +143,7 @@
     </div>
   </footer>
 </div>
+
 <!-- لوحة تحكم الإدارة والكاشير ونظام الـ POS -->
 <div id="adminApp">
   <aside class="admin-sidebar" id="adminSidebar">
@@ -216,7 +218,7 @@
   </div>
 </div>
 
-<!-- نافذة المصادقة الحديثة والمنظمة -->
+<!-- نافذة المصادقة -->
 <div class="modal-bg" id="authModalBg">
   <div class="modal">
     <div class="modal-head">
@@ -271,28 +273,25 @@
   </div>
 </div>
 
-<!-- 2. نافذة تفاصيل المنتج السريعة -->
+<!-- النوافذ المنبثقة -->
 <div class="modal-bg" id="productDetailModalBg">
   <div class="modal" id="productDetailContent"></div>
 </div>
 
-<!-- 3. نافذة إضافة وتعديل المنتجات والمخزون في لوحة الإدارة -->
 <div class="modal-bg" id="modalBg">
   <div class="modal" id="modalContent"></div>
 </div>
 
-<!-- 4. نافذة طباعة ومشاركة فاتورة الكاشير (POS Receipt) -->
 <div class="modal-bg" id="posReceiptModalBg">
   <div class="modal" id="posReceiptContent"></div>
 </div>
 
-<!-- شريط الإشعارات المنبثق (Toast) -->
+<!-- شريط الإشعارات -->
 <div class="toast" id="toast">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
   <span id="toastMsg"></span>
 </div>
 
-<!-- ربط ملف الـ JavaScript المطور -->
 <script src="app.js"></script>
 </body>
 </html>
