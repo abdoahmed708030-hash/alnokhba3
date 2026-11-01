@@ -1,7 +1,6 @@
 // ============================================================
 // 1. إعدادات الاتصال بـ Supabase وبيانات المتجر الرسمية
 // ============================================================
-// تم تصحيح عنوان المشروع بدقة (حرف l الصحيح بدلاً من الخطأ المطبعي) لمنع Failed to fetch
 const SUPABASE_URL = 'https://ckbajixdhlbgrslbfbdf.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Bymlf2vYI1qyqWsZ5uz_cg_olVr4vHt';
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -109,14 +108,11 @@ function openAuthModal() {
   }
   document.getElementById('authModalBg').classList.add('open');
 }
-function closeAuthModal() { 
-  document.getElementById('authModalBg').classList.remove('open'); 
-}
+
 function closeAuthModal() { 
   document.getElementById('authModalBg').classList.remove('open'); 
 }
 
-// تبديل إظهار وإخفاء كلمة المرور
 function togglePasswordVisibility(fieldId, btnElement) {
   const input = document.getElementById(fieldId);
   if (!input) return;
@@ -203,7 +199,6 @@ async function handleAuth(e) {
 
       if (error) throw error;
 
-      // محاولة تسجيل الدخول مباشرة بعد نجاح التسجيل
       const { data: loginData, error: loginErr } = await supabaseClient.auth.signInWithPassword({
         email: email,
         password: password
@@ -213,7 +208,9 @@ async function handleAuth(e) {
         toast('تم إنشاء الحساب وتسجيل الدخول بنجاح');
         closeAuthModal();
         await checkAuth();
-        if (currentPage === 'orders' || currentPage === 'checkout' || currentPage === 'cart') {
+        if (currentProfile?.role === 'admin' || currentProfile?.role === 'cashier') {
+          openAdmin();
+        } else if (currentPage === 'orders' || currentPage === 'checkout' || currentPage === 'cart') {
           go(currentPage);
         }
       } else {
@@ -247,9 +244,13 @@ async function handleAuth(e) {
       closeAuthModal();
       await checkAuth();
 
-      if (currentPage === 'orders') render_orders();
-      else if (currentPage === 'cart') render_cart();
-      else if (currentPage === 'checkout') render_checkout();
+      if (currentProfile?.role === 'admin' || currentProfile?.role === 'cashier') {
+        openAdmin();
+      } else {
+        if (currentPage === 'orders') render_orders();
+        else if (currentPage === 'cart') render_cart();
+        else if (currentPage === 'checkout') render_checkout();
+      }
     } catch (err) {
       console.error('Sign in error:', err);
       toast('خطأ: ' + (err.message || 'بيانات الدخول غير صحيحة'));
@@ -312,7 +313,7 @@ async function fetchProducts() {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    console.warn('تعذر جلب المنتجات من السيرفر، استخدام الذاكرة المحلية إن وجدت:', err);
+    console.warn('تعذر جلب المنتجات من السيرفر:', err);
     return [];
   }
 }
@@ -353,8 +354,19 @@ async function fetchPosOrders() {
     return [];
   }
 }
+
+async function fetchCategoriesDB() {
+  try {
+    const { data, error } = await supabaseClient.from('categories').select('*').order('id');
+    if (error || !data || !data.length) return CATEGORIES;
+    return data;
+  } catch (e) {
+    return CATEGORIES;
+  }
+}
+
 // ============================================================
-// 4. التوجيه وعرض الواجهات الفوري (Instant Navigation & Router)
+// 4. التوجيه وعرض الواجهات (Navigation & Router)
 // ============================================================
 let currentPage = 'home';
 let STORE_PRODUCTS = [];
@@ -372,12 +384,12 @@ async function go(page, param) {
 }
 
 // ============================================================
-// 5. واجهات المتجر والصفحة الرئيسية السريعة (Storefront Views)
+// 5. واجهات المتجر والصفحة الرئيسية (Storefront Views)
 // ============================================================
 async function render_home() {
   const app = document.getElementById('app');
+  const cats = await fetchCategoriesDB();
   
-  // 1. عرض فوري للهيكل والبانر والأقسام دون انتظار رد السيرفر إطلاقاً
   app.innerHTML = `
     <section class="hero">
       <h1>كل اللي محتاجه تلاقيه عندنا </h1>
@@ -391,11 +403,11 @@ async function render_home() {
     <h2 class="section-title" id="catsSection">تسوق حسب القسم </h2>
     <p class="section-sub">اختر القسم للوصول السريع لمنتجاتك</p>
     <div class="cat-grid">
-      ${CATEGORIES.map(c => `
+      ${cats.map(c => `
         <div class="cat" onclick="filterByCat('${c.name}')">
-          <img src="${c.img}&auto=format&fit=crop&w=200&q=60" alt="${c.name}" loading="eager" decoding="async">
+          <img src="${c.img || 'https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=300&q=75'}" alt="${c.name}" loading="eager" decoding="async">
           <div class="cat__overlay">
-            <div class="cat__icon">${icon(c.icon)}</div>
+            <div class="cat__icon">${icon(c.icon || 'book')}</div>
             <p class="cat__name">${c.name}</p>
           </div>
         </div>`).join('')}
@@ -409,7 +421,6 @@ async function render_home() {
       <button class="btn" style="background:var(--gray);color:var(--navy);font-size:13px;padding:6px 14px" onclick="go('products')">عرض الكل ←</button>
     </div>
     
-    <!-- هياكل تحميل مؤقتة سريعة في أجزاء من الثانية لحين جلب البيانات -->
     <div class="grid" id="homeProductsGrid" style="margin-top:16px">
       ${Array(4).fill(0).map(() => `
         <div class="card" style="opacity:.6;animation:pulse 1.2s infinite ease-in-out">
@@ -424,7 +435,6 @@ async function render_home() {
     </div>
   `;
 
-  // 2. تعبئة كروت المنتجات فور استلام البيانات
   STORE_PRODUCTS = await fetchProducts();
   const grid = document.getElementById('homeProductsGrid');
   if (grid) {
@@ -444,10 +454,11 @@ function filterByCat(catName) {
 
 async function render_products() {
   STORE_PRODUCTS = await fetchProducts();
-  renderProductsUI();
+  await renderProductsUI();
 }
 
-function renderProductsUI() {
+async function renderProductsUI() {
+  const cats = await fetchCategoriesDB();
   let list = STORE_PRODUCTS;
   if (ACTIVE_CATEGORY !== 'all') {
     list = list.filter(p => p.cat === ACTIVE_CATEGORY);
@@ -468,7 +479,7 @@ function renderProductsUI() {
       <select onchange="ACTIVE_CATEGORY=this.value; renderProductsUI()" 
         style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--white);color:var(--ink);cursor:pointer">
         <option value="all" ${ACTIVE_CATEGORY === 'all' ? 'selected' : ''}>كل الأقسام</option>
-        ${CATEGORIES.map(c => `<option value="${c.name}" ${ACTIVE_CATEGORY === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+        ${cats.map(c => `<option value="${c.name}" ${ACTIVE_CATEGORY === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
       </select>
     </div>
 
@@ -546,7 +557,6 @@ function toggleFav(id, el) {
   setFavs();
 }
 
-// نافذة عرض تفاصيل المنتج المنبثقة
 async function openProductDetailModal(id) {
   if (!STORE_PRODUCTS.length) STORE_PRODUCTS = await fetchProducts();
   const p = STORE_PRODUCTS.find(x => x.id === id);
@@ -580,6 +590,7 @@ async function openProductDetailModal(id) {
   `;
   bg.classList.add('open');
 }
+
 function closeProductDetailModal() { 
   document.getElementById('productDetailModalBg').classList.remove('open'); 
 }
@@ -676,7 +687,7 @@ async function render_checkout() {
     <form class="form" onsubmit="submitOnlineOrder(event)">
       <div>
         <label>الاسم الرباعي الكامل *</label>
-        <input name="fullName" value="${fullName}" placeholder="مثال:ادخل اسمك" required pattern=".*\\s+.*\\s+.*\\s+.*" title="يرجى إدخال اسم رباعي كامل">
+        <input name="fullName" value="${fullName}" placeholder="مثال: محمد أحمد علي حسن" required pattern=".*\\s+.*\\s+.*\\s+.*" title="يرجى إدخال اسم رباعي كامل">
       </div>
       <div>
         <label>رقم الهاتف الأساسي (01xxxxxxxxx) *</label>
@@ -905,7 +916,6 @@ async function render_orders() {
   `;
 }
 
-
 async function render_orderDetail(num) {
   const orders = await fetchOrders();
   const o = orders.find(x => x.order_number === num);
@@ -1016,12 +1026,14 @@ function setAdminView(view) {
   if (side) side.classList.remove('open');
 
   const titles = {
-    dashboard: 'لوحة القيادة والإحصائيات ',
-    pos: 'شاشة الكاشير والمبيعات السريعة ',
-    orders: 'إدارة طلبات الأونلاين ',
+    dashboard: 'لوحة القيادة والإحصائيات',
+    pos: 'شاشة الكاشير والمبيعات السريعة',
+    orders: 'إدارة طلبات الأونلاين',
     products: 'إدارة منتجات المتجر',
-    inventory: 'إدارة المخزون والتكاليف ',
-    reports: 'التقارير المالية والأرباح '
+    categories: 'إدارة وتعديل الأقسام',
+    printcalc: 'حاسبة وتكلفة طباعة الورق بالمطبعة',
+    inventory: 'إدارة المخزون والتكاليف',
+    reports: 'التقارير المالية والأرباح'
   };
   document.getElementById('adminPageTitle').textContent = titles[view] || 'لوحة التحكم';
   renderAdminContent();
@@ -1033,6 +1045,8 @@ async function renderAdminContent() {
   else if (CURRENT_ADMIN_VIEW === 'pos') await adminPOS();
   else if (CURRENT_ADMIN_VIEW === 'orders') await adminOrders();
   else if (CURRENT_ADMIN_VIEW === 'products') await adminProducts();
+  else if (CURRENT_ADMIN_VIEW === 'categories') await adminCategories();
+  else if (CURRENT_ADMIN_VIEW === 'printcalc') await adminPrintCalc();
   else if (CURRENT_ADMIN_VIEW === 'inventory') await adminInventory();
   else if (CURRENT_ADMIN_VIEW === 'reports') await adminReports();
 }
@@ -1051,10 +1065,13 @@ async function updateAdminBadges() {
 async function adminDashboard() {
   const orders = await fetchOrders();
   const posOrders = await fetchPosOrders();
+  const { data: printJobsData } = await supabaseClient.from('print_jobs').select('*');
+  const printJobs = printJobsData || [];
 
   const onlineSales = orders.filter(o => o.status !== 'cancelled').reduce((s, o) => s + Number(o.total), 0);
   const posSales = posOrders.reduce((s, o) => s + Number(o.total), 0);
-  const totalSales = onlineSales + posSales;
+  const printSales = printJobs.reduce((s, j) => s + Number(j.total_egp), 0);
+  const totalSales = onlineSales + posSales + printSales;
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
   document.getElementById('adminContent').innerHTML = `
@@ -1210,7 +1227,6 @@ async function checkoutPOS() {
   const profit = total - totalCost;
   const invCode = 'POS-' + Date.now().toString().slice(-6);
 
-  // 1. تسجيل الفاتورة في pos_orders
   const { error: posError } = await supabaseClient.from('pos_orders').insert([{
     invoice_code: invCode,
     items: POS_CART,
@@ -1223,7 +1239,6 @@ async function checkoutPOS() {
     return;
   }
 
-  // 2. خصم الكميات من المخزون inventory
   for (const it of POS_CART) {
     const { data: currentInv } = await supabaseClient.from('inventory').select('stock').eq('id', it.id).single();
     if (currentInv) {
@@ -1232,7 +1247,6 @@ async function checkoutPOS() {
     }
   }
 
-  // 3. عرض نافذة الطباعة والمشاركة
   openPosReceiptModal(invCode, [...POS_CART], total);
   POS_CART = [];
   adminPOS();
@@ -1413,6 +1427,7 @@ async function adminProducts() {
 
 async function openProductModal(id = null) {
   let p = null;
+  const cats = await fetchCategoriesDB();
   if (id) {
     const list = await fetchProducts();
     p = list.find(x => x.id === id);
@@ -1429,7 +1444,7 @@ async function openProductModal(id = null) {
 
       <label>القسم</label>
       <select name="cat" style="margin-bottom:10px">
-        ${CATEGORIES.map(c => `<option value="${c.name}" ${p?.cat === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
+        ${cats.map(c => `<option value="${c.name}" ${p?.cat === c.name ? 'selected' : ''}>${c.name}</option>`).join('')}
         <option value="عام" ${p?.cat === 'عام' ? 'selected' : ''}>عام</option>
       </select>
 
@@ -1498,7 +1513,7 @@ async function adminInventory() {
   document.getElementById('adminContent').innerHTML = `
     <div class="panel">
       <h3>
-        <span>سجل المخزون الداخلي والتكاليف  (${inv.length} صنف)</span>
+        <span>سجل المخزون الداخلي والتكاليف (${inv.length} صنف)</span>
         <button class="btn btn-primary" style="padding:6px 14px;font-size:13px" onclick="openInventoryModal()">+ إضافة صنف للمخزون</button>
       </h3>
     </div>
@@ -1601,44 +1616,263 @@ async function deleteInventoryItem(id) {
   adminInventory();
 }
 
-// 8.6 التقارير المالية والأرباح (Financial Reports)
-let REPORT_FILTER = 'all';
-
-async function adminReports() {
-  const posOrders = await fetchPosOrders();
-  const onlineOrders = await fetchOrders();
-
-  let filteredPos = posOrders;
-  const now = new Date();
-
-  if (REPORT_FILTER === 'today') {
-    filteredPos = posOrders.filter(o => new Date(o.created_at).toDateString() === now.toDateString());
-  } else if (REPORT_FILTER === 'week') {
-    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    filteredPos = posOrders.filter(o => new Date(o.created_at) >= oneWeekAgo);
-  } else if (REPORT_FILTER === 'month') {
-    filteredPos = posOrders.filter(o => {
-      const d = new Date(o.created_at);
-      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    });
-  }
-
-  const totalPosSales = filteredPos.reduce((s, x) => s + Number(x.total), 0);
-  const totalPosProfit = filteredPos.reduce((s, x) => s + Number(x.profit), 0);
-  const totalOnline = onlineOrders.filter(o => o.status !== 'cancelled').reduce((s, x) => s + Number(x.total), 0);
+// ============================================================
+// 8.6 إدارة وتعديل الأقسام (Categories Management)
+// ============================================================
+async function adminCategories() {
+  const cats = await fetchCategoriesDB();
 
   document.getElementById('adminContent').innerHTML = `
     <div class="panel">
       <h3>
-        <span>التقارير المالية والأرباح </span>
-        <select onchange="REPORT_FILTER=this.value; adminReports()" 
-          style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--white);color:var(--ink)">
-          <option value="all" ${REPORT_FILTER === 'all' ? 'selected' : ''}>كل الفترات</option>
-          <option value="today" ${REPORT_FILTER === 'today' ? 'selected' : ''}>اليوم فقط</option>
-          <option value="week" ${REPORT_FILTER === 'week' ? 'selected' : ''}>آخر 7 أيام</option>
-          <option value="month" ${REPORT_FILTER === 'month' ? 'selected' : ''}>هذا الشهر</option>
-        </select>
+        <span>أقسام المتجر (${cats.length})</span>
+        <button class="btn btn-primary" style="padding:6px 14px;font-size:13px" onclick="openCategoryModal()">+ إضافة قسم جديد</button>
       </h3>
+    </div>
+
+    <div class="panel">
+      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));gap:14px">
+        ${cats.map(c => `
+          <div style="border:1px solid var(--border);border-radius:12px;padding:12px;background:var(--white);display:flex;align-items:center;justify-content:space-between">
+            <span style="font-weight:800;color:var(--ink)">${c.name}</span>
+            <div style="display:flex;gap:6px">
+              <button class="btn" style="background:var(--blue);color:#fff;padding:4px 8px;font-size:11px" onclick="editCategoryPrompt(${c.id}, '${c.name}')">تعديل</button>
+              <button class="btn" style="background:#fee2e2;color:#dc2626;padding:4px 8px;font-size:11px" onclick="deleteCategory(${c.id})">حذف</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+async function openCategoryModal() {
+  const name = prompt('أدخل اسم القسم الجديد:');
+  if (!name || !name.trim()) return;
+
+  const { error } = await supabaseClient.from('categories').insert([{ name: name.trim() }]);
+  if (error) { toast('خطأ: ' + error.message); return; }
+  toast('تمت إضافة القسم بنجاح');
+  adminCategories();
+}
+
+async function editCategoryPrompt(id, currentName) {
+  const newName = prompt('تعديل اسم القسم:', currentName);
+  if (!newName || !newName.trim() || newName.trim() === currentName) return;
+
+  const { error } = await supabaseClient.from('categories').update({ name: newName.trim() }).eq('id', id);
+  if (error) { toast('خطأ: ' + error.message); return; }
+  toast('تم تحديث اسم القسم');
+  adminCategories();
+}
+
+async function deleteCategory(id) {
+  if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
+  const { error } = await supabaseClient.from('categories').delete().eq('id', id);
+  if (error) { toast('خطأ: ' + error.message); return; }
+  toast('تم حذف القسم');
+  adminCategories();
+}
+
+// ============================================================
+// 8.7 حاسبة وتكلفة طباعة الورق بالمطبعة
+// ============================================================
+async function adminPrintCalc() {
+  const { data: jobs } = await supabaseClient.from('print_jobs').select('*').order('created_at', { ascending: false }).limit(20);
+  const printJobs = jobs || [];
+
+  document.getElementById('adminContent').innerHTML = `
+    <div class="pos-container">
+      <div class="panel">
+        <h3 style="margin-top:0">حاسبة تكلفة الطباعة للعميل</h3>
+        <p style="font-size:13px;color:var(--muted)">اكتب عدد الأوراق وسعر الورقة بالقرش لحساب التكلفة تلقائياً بالجنيه وحفظ العملية في السجل المالي.</p>
+
+        <div style="display:grid;gap:12px;margin-top:16px">
+          <div>
+            <label style="font-weight:700;font-size:13px">عدد الورق المطبوع *</label>
+            <input type="number" id="calcPaperCount" placeholder="مثال: 150" min="1" 
+              style="width:100%;padding:12px;border:1px solid var(--border);border-radius:10px" oninput="calculatePrintCost()">
+          </div>
+
+          <div>
+            <label style="font-weight:700;font-size:13px">سعر الورقة بالقرش (مثال: 50 قرش = نصف جنيه) *</label>
+            <input type="number" id="calcPricePiasters" placeholder="مثال: 75" step="5" min="5" 
+              style="width:100%;padding:12px;border:1px solid var(--border);border-radius:10px" oninput="calculatePrintCost()">
+          </div>
+
+          <div>
+            <label style="font-weight:700;font-size:13px">وصف / ملاحظة (اختياري)</label>
+            <input type="text" id="calcNotes" placeholder="مثال: ملزمة تمريض سنة ثانية" 
+              style="width:100%;padding:12px;border:1px solid var(--border);border-radius:10px">
+          </div>
+
+          <div style="background:var(--gray);border-radius:12px;padding:16px;margin:10px 0;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <span style="font-size:13px;color:var(--muted);display:block">الإجمالي المستحق بالجنيه:</span>
+              <strong style="font-size:24px;color:var(--orange)" id="calcTotalEgp">0.00 EGP</strong>
+            </div>
+            <div style="text-align:end">
+              <span style="font-size:12px;color:var(--muted);display:block" id="calcDetailsPiasters">0 قرش</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="savePrintJob()">حفظ العملية وإصدار إيصال</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin-top:0">آخر عمليات الطباعة المسجلة</h3>
+        <div style="max-height:480px;overflow-y:auto">
+          ${!printJobs.length ? '<p style="color:var(--muted);text-align:center">لا توجد عمليات طباعة مسجلة بعد</p>' : printJobs.map(j => `
+            <div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <b>${j.paper_count} ورقة</b> × ${j.price_piasters} قرش
+                <div style="font-size:11px;color:var(--muted)">${new Date(j.created_at).toLocaleString('ar-EG')} ${j.notes ? `(${j.notes})` : ''}</div>
+              </div>
+              <strong style="color:var(--orange)">${fmt(j.total_egp)}</strong>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function calculatePrintCost() {
+  const count = parseInt(document.getElementById('calcPaperCount').value, 10) || 0;
+  const piasters = parseFloat(document.getElementById('calcPricePiasters').value) || 0;
+  
+  const totalPiasters = count * piasters;
+  const totalEgp = totalPiasters / 100;
+
+  document.getElementById('calcTotalEgp').textContent = fmt(totalEgp);
+  document.getElementById('calcDetailsPiasters').textContent = `${totalPiasters} قرش`;
+}
+
+async function savePrintJob() {
+  const count = parseInt(document.getElementById('calcPaperCount').value, 10);
+  const piasters = parseFloat(document.getElementById('calcPricePiasters').value);
+  const notes = document.getElementById('calcNotes').value.trim();
+
+  if (!count || !piasters) {
+    toast('يرجى إدخال عدد الورق وسعر الورقة بالقرش');
+    return;
+  }
+
+  const totalEgp = (count * piasters) / 100;
+
+  const { error } = await supabaseClient.from('print_jobs').insert([{
+    paper_count: count,
+    price_piasters: piasters,
+    total_egp: totalEgp,
+    notes: notes || null
+  }]);
+
+  if (error) { toast('خطأ في حفظ عملية الطباعة: ' + error.message); return; }
+  toast('تم حفظ عملية الطباعة بنجاح');
+  adminPrintCalc();
+}
+
+// ============================================================
+// 8.8 التقارير المالية المتطورة والأرباح
+// ============================================================
+let REPORT_FILTER = 'all';
+let REPORT_DATE_START = '';
+let REPORT_DATE_END = '';
+
+async function adminReports() {
+  const posOrders = await fetchPosOrders();
+  const onlineOrders = await fetchOrders();
+  const { data: printJobsData } = await supabaseClient.from('print_jobs').select('*');
+  const printJobs = printJobsData || [];
+
+  let filteredPos = posOrders;
+  let filteredOnline = onlineOrders.filter(o => o.status !== 'cancelled');
+  let filteredPrints = printJobs;
+
+  const now = new Date();
+
+  if (REPORT_FILTER === 'today') {
+    filteredPos = filteredPos.filter(o => new Date(o.created_at).toDateString() === now.toDateString());
+    filteredOnline = filteredOnline.filter(o => new Date(o.created_at).toDateString() === now.toDateString());
+    filteredPrints = filteredPrints.filter(o => new Date(o.created_at).toDateString() === now.toDateString());
+  } else if (REPORT_FILTER === 'week') {
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    filteredPos = filteredPos.filter(o => new Date(o.created_at) >= oneWeekAgo);
+    filteredOnline = filteredOnline.filter(o => new Date(o.created_at) >= oneWeekAgo);
+    filteredPrints = filteredPrints.filter(o => new Date(o.created_at) >= oneWeekAgo);
+  } else if (REPORT_FILTER === 'month') {
+    filteredPos = filteredPos.filter(o => {
+      const d = new Date(o.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    filteredOnline = filteredOnline.filter(o => {
+      const d = new Date(o.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+    filteredPrints = filteredPrints.filter(o => {
+      const d = new Date(o.created_at);
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    });
+  } else if (REPORT_FILTER === 'custom' && REPORT_DATE_START && REPORT_DATE_END) {
+    const start = new Date(REPORT_DATE_START);
+    const end = new Date(REPORT_DATE_END);
+    end.setHours(23, 59, 59);
+
+    filteredPos = filteredPos.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= start && d <= end;
+    });
+    filteredOnline = filteredOnline.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= start && d <= end;
+    });
+    filteredPrints = filteredPrints.filter(o => {
+      const d = new Date(o.created_at);
+      return d >= start && d <= end;
+    });
+  }
+
+  const totalPosSales = filteredPos.reduce((s, x) => s + Number(x.total), 0);
+  const totalPosProfit = filteredPos.reduce((s, x) => s + Number(x.profit || 0), 0);
+  const totalOnline = filteredOnline.reduce((s, x) => s + Number(x.total), 0);
+  const totalPrintRevenue = filteredPrints.reduce((s, x) => s + Number(x.total_egp), 0);
+  const totalPrintedPapers = filteredPrints.reduce((s, x) => s + Number(x.paper_count), 0);
+
+  const itemSalesCount = {};
+  filteredPos.forEach(order => {
+    (order.items || []).forEach(it => {
+      itemSalesCount[it.name] = (itemSalesCount[it.name] || 0) + (it.qty || 1);
+    });
+  });
+  filteredOnline.forEach(order => {
+    (order.items || []).forEach(it => {
+      itemSalesCount[it.name] = (itemSalesCount[it.name] || 0) + (it.qty || 1);
+    });
+  });
+
+  const sortedBestSellers = Object.entries(itemSalesCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  document.getElementById('adminContent').innerHTML = `
+    <div class="panel">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+        <h3 style="margin:0">التقارير المالية والأرباح ومبيعات المطبعة</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <select onchange="REPORT_FILTER=this.value; adminReports()" 
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:10px;background:var(--white);color:var(--ink)">
+            <option value="all" ${REPORT_FILTER === 'all' ? 'selected' : ''}>كل الفترات</option>
+            <option value="today" ${REPORT_FILTER === 'today' ? 'selected' : ''}>اليوم فقط</option>
+            <option value="week" ${REPORT_FILTER === 'week' ? 'selected' : ''}>آخر 7 أيام</option>
+            <option value="month" ${REPORT_FILTER === 'month' ? 'selected' : ''}>هذا الشهر</option>
+            <option value="custom" ${REPORT_FILTER === 'custom' ? 'selected' : ''}>تحديد فترة مخصصة</option>
+          </select>
+          ${REPORT_FILTER === 'custom' ? `
+            <input type="date" value="${REPORT_DATE_START}" onchange="REPORT_DATE_START=this.value; adminReports()" style="padding:6px;border-radius:8px;border:1px solid var(--border)">
+            <span>إلى</span>
+            <input type="date" value="${REPORT_DATE_END}" onchange="REPORT_DATE_END=this.value; adminReports()" style="padding:6px;border-radius:8px;border:1px solid var(--border)">
+          ` : ''}
+        </div>
+      </div>
     </div>
 
     <div class="stats">
@@ -1646,14 +1880,21 @@ async function adminReports() {
         <div class="stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
         <div>
           <div class="stat__num" style="color:#16a34a">${fmt(totalPosProfit)}</div>
-          <div class="stat__label">صافي أرباح الكاشير (Profit)</div>
+          <div class="stat__label">صافي أرباح الكاشير</div>
         </div>
       </div>
       <div class="stat stat--orange">
         <div class="stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/></svg></div>
         <div>
-          <div class="stat__num">${fmt(totalPosSales)}</div>
-          <div class="stat__label">مبيعات الكاشير المحددة</div>
+          <div class="stat__num">${fmt(totalPosSales + totalOnline + totalPrintRevenue)}</div>
+          <div class="stat__label">إجمالي الدخل الشامل</div>
+        </div>
+      </div>
+      <div class="stat stat--navy">
+        <div class="stat__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>
+        <div>
+          <div class="stat__num">${totalPrintedPapers} ورقة</div>
+          <div class="stat__label">إجمالي الورق المطبوع (${fmt(totalPrintRevenue)})</div>
         </div>
       </div>
       <div class="stat stat--blue">
@@ -1666,30 +1907,17 @@ async function adminReports() {
     </div>
 
     <div class="panel">
-      <h3>سجل فواتير الكاشير الأخيرة </h3>
-      <div class="data-table-wrap">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>كود الفاتورة</th>
-              <th>التاريخ والوقت</th>
-              <th>عدد الأصناف</th>
-              <th>إجمالي الفاتورة</th>
-              <th>الربح المحقق</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${!filteredPos.length ? '<tr><td colspan="5" style="text-align:center;color:var(--muted)">لا توجد مبيعات في هذه الفترة</td></tr>' : filteredPos.map(inv => `
-              <tr>
-                <td><b>${inv.invoice_code}</b></td>
-                <td>${new Date(inv.created_at).toLocaleString('ar-EG')}</td>
-                <td>${inv.items.length} أصناف</td>
-                <td style="font-weight:900;color:var(--orange)">${fmt(inv.total)}</td>
-                <td style="font-weight:900;color:#16a34a">+${fmt(inv.profit)}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
+      <h3>المنتجات الأكثر طلباً ومبيعاً</h3>
+      ${!sortedBestSellers.length ? '<p style="color:var(--muted)">لا توجد بيانات مبيعات بعد</p>' : `
+        <div style="display:grid;gap:10px">
+          ${sortedBestSellers.map(([name, qty], idx) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--gray);border-radius:10px">
+              <span><b>#${idx + 1}</b> ${name}</span>
+              <strong style="color:var(--navy)">تم بيع ${qty} قطعة</strong>
+            </div>
+          `).join('')}
+        </div>
+      `}
     </div>
   `;
 }
@@ -1699,6 +1927,6 @@ async function adminReports() {
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
   updateBadge();
-  go('home'); // عرض فوري للصفحة الرئيسية دون أي تأخير
-  checkAuth(); // فحص تسجيل الدخول في الخلفية
+  go('home');
+  checkAuth();
 });
